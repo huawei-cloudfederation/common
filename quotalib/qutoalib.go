@@ -2,12 +2,38 @@
 
 package quotalib
 
+import (
+	"log"
+	"net/http"
+	"fmt"
+	"io/ioutil"
+	"bytes"
+	"encoding/json"
+)
+
 //SetQuota will read a json file the local disk and performe a SET Quota HTTP api call
 //role : Sipply the role for whcih the Quota to be set
 //inputPath : Path from where quota json file should be read
 func SetQuota(role string, inputPath string) error {
 
 	//Function implementation
+
+	buf,err :=  ioutil.ReadFile(inputPath) 
+	if err != nil {
+                log.Printf("Unable to read file = %v", err)
+		return err
+        }
+	body := bytes.NewBuffer(buf)
+
+	resp ,err := http.Post(fmt.Sprintf("http://172.31.44.22:5050/quota/%s", role),"text/json",body)
+	 if err != nil {
+                log.Printf("Unable to reach the Master error = %v", err)
+		return err
+        }
+
+        defer resp.Body.Close()
+	response, _ := ioutil.ReadAll(resp.Body)
+	log.Println(string(response))
 
 	return nil
 }
@@ -17,7 +43,18 @@ func SetQuota(role string, inputPath string) error {
 func DelQuota(role string) error {
 
 	//Function implementation
+ 
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("http://172.31.44.22:5050/quota/%s", role), nil)
+	// handle err
+	resp, err := http.DefaultClient.Do(req)
 
+	 if err != nil {
+
+                log.Printf("Unable to reach the Master error = %v", err)
+                //return
+        }
+
+	 log.Printf("the response from the master = %v", resp)	
 	return nil
 
 }
@@ -28,7 +65,32 @@ func GetQuota(role string) ([]byte, error) {
 
 	var json_data []byte
 
+	var data map[string]interface{}
 	//Function implementation
+	 resp, err := http.Get(fmt.Sprintf("http://172.31.44.22:5050/quota/%s",role))
+
+        if err != nil {
+
+                log.Printf("Unable to reach the Master error = %v", err)
+                //return
+        }
+        defer resp.Body.Close()
+
+        body, err := ioutil.ReadAll(resp.Body)
+
+        if err != nil {
+                log.Printf("Unable to read the body error = %v", err)
+                //return
+        }
+	json_data = []byte(body)
+
+	 json.Unmarshal(json_data,&data)
+
+        if err != nil {
+                log.Printf("Json Unmarshall error = %v", err)
+                //return
+        }
+        log.Println("Get: ",data["infos"])
 
 	return json_data, nil
 }
