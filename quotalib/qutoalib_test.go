@@ -1,9 +1,12 @@
 package quotalib
 
 import "testing"
+import "../types"
 
 func Test_SetQuota(T *testing.T) {
-	e := SetQuota("test","/home/ubuntu/quota.json")
+	var dc typ.DC
+	dc.Endpoint = "172.31.44.22:5050"
+	e := SetQuota("test","/home/ubuntu/quota.json",dc)
 
 	if e != nil {
 		T.Error("error", e)
@@ -11,7 +14,9 @@ func Test_SetQuota(T *testing.T) {
 }
 
 func Test_SetQuotaFile(T *testing.T) {
-	e := SetQuota("test","quota.json")
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+	e := SetQuota("test","quota.json",dc)
 
 	if e != nil {
 		T.Error("error", e)
@@ -19,7 +24,9 @@ func Test_SetQuotaFile(T *testing.T) {
 }
 
 func Test_SetQuotaRole(T *testing.T) {
-	e := SetQuota("federation","/home/ubuntu/quota1.json")
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+	e := SetQuota("federation","/home/ubuntu/quota1.json",dc)
 
 	if e != nil {
 		T.Error("error", e)
@@ -27,26 +34,54 @@ func Test_SetQuotaRole(T *testing.T) {
 }
 
 func Test_GetQuota(T *testing.T) {
-        resp,e := GetQuota("test")
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+        resp,e := GetQuota("test",dc)
 
         if e != nil {
                 T.Error("error", e)
         }
+	 T.Log("the response is  ",resp)
 
-	T.Log("the json is ",resp)
 }
 
 func Test_GetQuotaRole(T *testing.T) {
-	resp,e := GetQuota("federation")
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+	resp,e := GetQuota("federation",dc)
 
 	if e != nil {
 		T.Error("error", e)
 	}
-	T.Log("the json is ",resp)
+	 T.Log("the response is  ",resp)
+}
+
+func Test_RemainingQuota(T *testing.T) {
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+	cpu,mem,disk,e := RemainingResource("test",dc)
+
+	if e != nil {
+		T.Error("error", e)
+	}
+	T.Log("the cpu,mem,quota  are ",cpu,mem,disk)
+}
+func Test_RemainingQuotaRole(T *testing.T) {
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+	cpu,mem,disk,e := RemainingResource("federation",dc)
+
+	if e != nil {
+		T.Error("error", e)
+	}
+	T.Log("the cpu,mem,disk  are ",cpu,mem,disk)
+
 }
 
 func Test_DelQuota(T *testing.T) {
-        e := DelQuota("test")
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+        e := DelQuota("test",dc)
 
         if e != nil {
                 T.Error("error", e)
@@ -54,7 +89,9 @@ func Test_DelQuota(T *testing.T) {
 }
 
 func Test_DelQuotaRole(T *testing.T) {
-        e := DelQuota("federation")
+	 var dc typ.DC
+        dc.Endpoint = "172.31.44.22:5050"
+        e := DelQuota("federation",dc)
 
         if e != nil {
                 T.Error("error", e)
