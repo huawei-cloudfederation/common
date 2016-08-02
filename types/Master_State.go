@@ -41,7 +41,7 @@ type FW struct {
 	ID                string `json:"id"`
 	Name              string `json:"name"`
 	Pid               string `json:"pid"`
-	used_resources    interface{}
+	Used_Resources    interface{} `json:used_resources`
 	offered_resources interface{}
 	Capabilities      []interface{} `json:"capabilities"`
 	Hostname          string        `json:"hostname"`
