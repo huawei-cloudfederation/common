@@ -3,8 +3,8 @@
 package quotalib
 
 import (
-	"common/types"
 	"bytes"
+	"common/types"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,24 +14,24 @@ import (
 
 //Declare the structure which will give quota information
 type QInfos struct {
-	Infos []QuotaInfo "json:'info'"
+	Infos []QuotaInfo `json:"infos"`
 }
 
 type QuotaInfo struct {
-	Guarantee []GuaranteeInfo "json:'guarantee'" //allocate guaranteed quota to a role associted
-	Role      string          "json:'role'"      //quota is applied with this role
+	Role      string          `json:"role"`      //quota is applied with this role
+	Guarantee []GuaranteeInfo `json:"guarantee"` //allocate guaranteed quota to a role associted
 
 }
 
 type GuaranteeInfo struct {
-	Name   string     "json:'name'" // name of the resource, ex:cpu
-	Role   string     "json:'role'"
-	Scalar ScalarInfo "json:'scalar'" //scalar resources info
-	Type   string     "json:'type'"   //type of resource ex:scalar
+	Name   string     `json:"name"` // name of the resource, ex:cpu
+	Role   string     `json:"role"`
+	Scalar ScalarInfo `json:"scalar"` //scalar resources info
+	Type   string     `json:"type"`   //type of resource ex:scalar
 }
 
 type ScalarInfo struct {
-	Value float64 "json:'value'" //value of resource,ex:cpu='2'
+	Value float64 `json:"value"` //value of resource,ex:cpu='2'
 }
 
 //SetQuota will read a json file the local disk and performe a SET Quota HTTP api call
@@ -55,7 +55,7 @@ func SetQuota(dc typ.DC, role string, inputPath string) error {
 		return nil
 	}
 
-	response,_ := ioutil.ReadAll(resp.Body)
+	response, _ := ioutil.ReadAll(resp.Body)
 
 	defer resp.Body.Close()
 
@@ -95,13 +95,12 @@ func GetQuota(dc typ.DC, role string) ([]GuaranteeInfo, error) {
 
 	if err != nil {
 		log.Printf("Unable to reach the Master error = %v", err)
-		return guarante,nil	
+		return guarante, nil
 	}
 
-	body,_ := ioutil.ReadAll(resp.Body)
+	body, _ := ioutil.ReadAll(resp.Body)
 
 	defer resp.Body.Close()
-
 
 	error := json.Unmarshal([]byte(body), &data)
 
@@ -157,9 +156,8 @@ func RemainingResource(dc typ.DC, role string) (float64, float64, float64, error
 
 	if err != nil {
 		log.Printf("Unable to reach the Master error = %v", err)
-		return CPU,MEM,DISK,nil
+		return CPU, MEM, DISK, nil
 	}
-
 
 	body, _ := ioutil.ReadAll(resp.Body)
 
@@ -170,9 +168,9 @@ func RemainingResource(dc typ.DC, role string) (float64, float64, float64, error
 		log.Printf("Json Unmarshall error = %v", err)
 	}
 
-	for key, _ := range mState.Frameworks {
-		if mState.Frameworks[key].Role == role {
-			usedR := mState.Frameworks[key].Used_Resources.(map[string]interface{})
+	for _, fw := range mState.Frameworks {
+		if fw.Role == role {
+			usedR := fw.Used_Resources.(map[string]interface{})
 			uCPU = usedR["cpus"].(float64)
 			uMEM = usedR["mem"].(float64)
 			uDISK = usedR["disk"].(float64)
