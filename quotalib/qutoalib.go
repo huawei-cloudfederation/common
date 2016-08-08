@@ -4,12 +4,14 @@ package quotalib
 
 import (
 	"bytes"
-	"common/types"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	//Packages of this project
+	"common/types"
 )
 
 //Declare the structure which will give quota information
@@ -35,31 +37,31 @@ type ScalarInfo struct {
 }
 
 //SetQuota will read a json file the local disk and performe a SET Quota HTTP api call
-//role : Sipply the role for whcih the Quota to be set
+//role : Simply the role for whcih the Quota to be set
 //inputPath : Path from where quota json file should be read
 func SetQuota(dc typ.DC, role string, inputPath string) error {
-	log.Printf("master Endpoint is", dc.Endpoint)
-
 	//Function implementation
 
 	buf, err := ioutil.ReadFile(inputPath)
 	if err != nil {
 		log.Printf("Unable to read file = %v", err)
+		return err
 	}
 
 	body := bytes.NewBuffer(buf)
 
-	resp, err := http.Post(fmt.Sprintf("http://%s/quota/%s", dc.Endpoint, role), "text/json", body)
+	resp, err := http.Post(fmt.Sprintf("%s/quota/%s", dc.Endpoint, role), "text/json", body)
 	if err != nil {
 		log.Printf("Unable to reach the Master error = %v", err)
-		return nil
+		return err
 	}
 
-	response, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Server returned error %v", resp)
+		return fmt.Errorf("Server returned error respone %v", resp)
+	}
 
-	defer resp.Body.Close()
-
-	log.Println(string(response))
+	//All okay the Quota has been set
 
 	return nil
 }
@@ -70,55 +72,56 @@ func DelQuota(dc typ.DC, role string) error {
 
 	//Function implementation
 
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("http://%s/quota/%s", dc.Endpoint, role), nil)
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/quota/%s", dc.Endpoint, role), nil)
 
 	// handle err
 	resp, err := http.DefaultClient.Do(req)
 
 	if err != nil {
 		log.Printf("Unable to reach the Master error = %v", err)
+		return err
 	}
 
-	log.Printf("the response from the master = %v", resp)
-	return nil
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Server returned an error %v", resp)
+		return fmt.Errorf("Server returned error respone %v", resp)
+	}
 
+	return nil
 }
 
 //GetQuota Will get a json representing Quota for the given role
-//role : Sipply the role name , usually Federation
-func GetQuota(dc typ.DC, role string) ([]GuaranteeInfo, error) {
+//role : Simply the role name , usually Federation
+func GetQuota(dc typ.DC, role string) (*QuotaInfo, error) {
 	var data QInfos
-	var guarante []GuaranteeInfo
 
 	//Function implementation
-	resp, err := http.Get(fmt.Sprintf("http://%s/quota/%s", dc.Endpoint, role))
+	resp, err := http.Get(fmt.Sprintf("%s/quota/%s", dc.Endpoint, role))
 
 	if err != nil {
 		log.Printf("Unable to reach the Master error = %v", err)
-		return guarante, nil
+		return nil, err
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	defer resp.Body.Close()
 
-	error := json.Unmarshal([]byte(body), &data)
+	err = json.Unmarshal([]byte(body), &data)
 
-	if error != nil {
+	if err != nil {
 		log.Printf("Json Unmarshall error = %v", err)
+		return nil, err
 	}
 
-	for key, _ := range data.Infos {
-		if data.Infos[key].Role == role {
-			guarante = data.Infos[key].Guarantee
-			log.Println(guarante)
-			break
-		} else if data.Infos[key].Role != role {
-			log.Println("the quota for the", role, " doesn't exist", guarante)
+	for _, quota := range data.Infos {
+		if quota.Role == role {
+			return &quota, nil
 		}
 	}
 
-	return guarante, nil
+	//None found matching our role name
+	return nil, fmt.Errorf("No Quota found for role=%s", role)
 }
 
 //RemainingResources
@@ -135,28 +138,32 @@ func RemainingResource(dc typ.DC, role string) (float64, float64, float64, error
 	var mState typ.MasterState
 
 	//Step 1: This should first call GetQuota() and interpret gaurantee
-	quota, _ := GetQuota(dc, role)
+	quotaInfo, err := GetQuota(dc, role)
+	if err != nil {
+		log.Printf("Error: GetQuota(%s, %s)", dc.Endpoint, role)
+		return 0.0, 0.0, 0.0, err
+	}
 
-	log.Println("the quota is ", quota, "\n")
+	log.Println("the quota is ", quotaInfo)
 
-	for index, _ := range quota {
-		if quota[index].Name == "cpus" {
-			qCPU = quota[index].Scalar.Value
+	for _, g := range quotaInfo.Guarantee {
+		if g.Name == "cpus" {
+			qCPU = g.Scalar.Value
 		}
-		if quota[index].Name == "mem" {
-			qMEM = quota[index].Scalar.Value
+		if g.Name == "mem" {
+			qMEM = g.Scalar.Value
 		}
-		if quota[index].Name == "disk" {
-			qDISK = quota[index].Scalar.Value
+		if g.Name == "disk" {
+			qDISK = g.Scalar.Value
 		}
 	}
 
 	//Step 2: This should next call the /state-summary endpoint from the master and figure out all the remaining resources
-	resp, err := http.Get(fmt.Sprintf("http://%s/state.json", dc.Endpoint))
+	resp, err := http.Get(fmt.Sprintf("%s/state.json", dc.Endpoint))
 
 	if err != nil {
 		log.Printf("Unable to reach the Master error = %v", err)
-		return CPU, MEM, DISK, nil
+		return 0.0, 0.0, 0.0, err
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -166,6 +173,7 @@ func RemainingResource(dc typ.DC, role string) (float64, float64, float64, error
 	err = json.Unmarshal(body, &mState)
 	if err != nil {
 		log.Printf("Json Unmarshall error = %v", err)
+		return 0.0, 0.0, 0.0, err
 	}
 
 	for _, fw := range mState.Frameworks {
