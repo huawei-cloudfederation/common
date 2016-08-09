@@ -37,7 +37,7 @@ type ScalarInfo struct {
 }
 
 //SetQuota will read a json file the local disk and performe a SET Quota HTTP api call
-//role : Sipply the role for whcih the Quota to be set
+//role : Simply the role for whcih the Quota to be set
 //inputPath : Path from where quota json file should be read
 func SetQuota(dc typ.DC, role string, inputPath string) error {
 	//Function implementation
