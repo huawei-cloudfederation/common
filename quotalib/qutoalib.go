@@ -67,7 +67,7 @@ func SetQuota(dc typ.DC, role string, inputPath string) error {
 }
 
 //DelQuota Will delete the Quota set on the given role
-//role : Sipply the role name , usually Federation
+//role : Simply the role name , usually Federation
 func DelQuota(dc typ.DC, role string) error {
 
 	//Function implementation
