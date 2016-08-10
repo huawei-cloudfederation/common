@@ -8,9 +8,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"os"
 
 	//Packages specific to this project
-	"common/types"
+	"../types"
 )
 
 func CreatJson() {
@@ -30,8 +31,22 @@ func CreatJson() {
 
 }
 
-func Test_InitPlain(T *testing.T) {
+func DeleteJson() {
+	os.Remove("quota0.json")
+	os.Remove("quota2.json")
+}
+
+var DC_INVALID_ENDPOINT = "http://127.127.127.127:5050"
+
+func TestMain(M *testing.M) {
+	//Initialize the Json files
 	CreatJson()
+
+	//Run the tests
+	M.Run()
+
+	//Delete the json files
+	DeleteJson()
 }
 
 //setquota with correct input
@@ -56,7 +71,7 @@ func TestSetQuotaValid(T *testing.T) {
 func TestSetQuotaBadMaster(T *testing.T) {
 	var dc typ.DC
 
-	dc.Endpoint = "http://10.11.12.13:5050"
+	dc.Endpoint = DC_INVALID_ENDPOINT
 	err := SetQuota(dc, "federation", "quota0.json")
 
 	if err == nil {
@@ -64,7 +79,7 @@ func TestSetQuotaBadMaster(T *testing.T) {
 		T.Fail()
 	}
 
-	if !strings.Contains(err.Error(), "Post http://10.11.12.13:5050/quota/federation: dial tcp 10.11.12.13:5050: i/o timeout") {
+	if !strings.Contains(err.Error(), "getsockopt: connection refused") {
 		//If its some other error then fail
 		T.Fail()
 	}
@@ -146,7 +161,7 @@ func TestGetQuotaValid(T *testing.T) {
 func TestGetQuotaBadMaster(T *testing.T) {
 	var dc typ.DC
 
-	dc.Endpoint = "http://10.11.12.13:5050"
+	dc.Endpoint = DC_INVALID_ENDPOINT
 
 	_, err := GetQuota(dc, "federation")
 
@@ -155,7 +170,7 @@ func TestGetQuotaBadMaster(T *testing.T) {
 		T.Fail()
 	}
 
-	if !strings.Contains(err.Error(), "Get http://10.11.12.13:5050/quota/federation: dial tcp 10.11.12.13:5050: i/o timeout") {
+	if !strings.Contains(err.Error(), "getsockopt: connection refused") {
 		//If its some other error then fail
 		T.Fail()
 	}
@@ -247,7 +262,7 @@ func TestRemainingResourceValidStateJson(T *testing.T) {
 func TestRemainingResourceBadMaster(T *testing.T) {
 	var dc typ.DC
 
-	dc.Endpoint = "http://10.11.12.13:5050"
+	dc.Endpoint = DC_INVALID_ENDPOINT
 
 	_, _, _, err := RemainingResource(dc, "federation")
 
@@ -256,7 +271,7 @@ func TestRemainingResourceBadMaster(T *testing.T) {
 		T.Fail()
 	}
 
-	if !strings.Contains(err.Error(), "Get http://10.11.12.13:5050/quota/federation: dial tcp 10.11.12.13:5050: i/o timeout") {
+	if !strings.Contains(err.Error(), "getsockopt: connection refused") {
 		//If its some other error then fail
 		T.Fail()
 	}
@@ -336,7 +351,7 @@ func TestDelQuotaInvalidResponse(T *testing.T) {
 func TestDelQuotaInvalidMaster(T *testing.T) {
 	var dc typ.DC
 
-	dc.Endpoint = "https://10.11.12.13:5050"
+	dc.Endpoint = DC_INVALID_ENDPOINT
 	err := DelQuota(dc, "federation")
 
 	if err == nil {
@@ -344,7 +359,7 @@ func TestDelQuotaInvalidMaster(T *testing.T) {
 		T.Fail()
 	}
 
-	if !strings.Contains(err.Error(), "dial tcp 10.11.12.13:5050: i/o timeout") {
+	if !strings.Contains(err.Error(), "getsockopt: connection refused") {
 		//If its some other error then fail
 		T.Fail()
 	}

@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	//Packages of this project
-	"common/types"
+	"../types"
 )
 
 //Declare the structure which will give quota information
